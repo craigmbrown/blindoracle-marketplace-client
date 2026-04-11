@@ -2,6 +2,38 @@
 requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.backends._legacy:_Backend"
 
+[project]
+name = "blindoracle-marketplace-client"
+version = "0.1.0"
+description = "Python client SDK for the BlindOracle Agent-to-Agent Economy — prediction markets, DeFi compliance, and agent reputation"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Craig Brown", email = "craigmbrown@gmail.com"}]
+keywords = ["prediction-markets", "chainlink", "ai-agents", "defi", "langchain", "crewai", "autogen", "a2a"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+langchain = ["langchain>=0.1.0", "langchain-core>=0.1.0"]
+autogen = ["pyautogen>=0.2.0"]
+crewai = ["crewai>=0.1.0"]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "mypy>=1.0"]
+
+[project.urls]
+Homepage = "https://craigmbrown.com/blindoracle"
+Repository = "https://github.com/craigmbrown/blindoracle-marketplace-client"
+Documentation = "https://craigmbrown.com/blindoracle/api-guide.html"
+
 [tool.black]
 line-length = 100
 target-version = ["py39"]
