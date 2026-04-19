@@ -125,12 +125,20 @@ class BlindOracleClient:
         method: str,
         path: str,
         body: Optional[Dict[str, Any]] = None,
+        extra_headers: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
-        """Make an HTTP request to the BlindOracle API."""
+        """Make an HTTP request to the BlindOracle API.
+
+        extra_headers: optional per-call headers (e.g. X-402-Payment,
+            X-402-ZK-Proof) merged on top of the session defaults.
+        """
         url = f"{self.config.api_url.rstrip('/')}/{path.lstrip('/')}"
         data = json.dumps(body).encode() if body else None
 
-        req = Request(url, data=data, headers=self._headers(), method=method)
+        headers = self._headers()
+        if extra_headers:
+            headers.update(extra_headers)
+        req = Request(url, data=data, headers=headers, method=method)
 
         try:
             with urlopen(req, timeout=self.config.timeout_secs) as resp:
@@ -144,8 +152,13 @@ class BlindOracleClient:
     def _get(self, path: str) -> Dict[str, Any]:
         return self._request("GET", path)
 
-    def _post(self, path: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        return self._request("POST", path, body)
+    def _post(
+        self,
+        path: str,
+        body: Dict[str, Any],
+        extra_headers: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, Any]:
+        return self._request("POST", path, body, extra_headers=extra_headers)
 
     def _put(self, path: str, body: Dict[str, Any]) -> Dict[str, Any]:
         return self._request("PUT", path, body)
@@ -276,18 +289,90 @@ class BlindOracleClient:
         result_summary: str,
         proof_chain_hash: str = "auto",
         duration_secs: Optional[float] = None,
+        payment_proof: Optional[str] = None,
+        zk_proof: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Complete a job and submit results."""
+        """Complete a job and submit results.
+
+        Payment (required when the marketplace runs with
+        ``A2A_REQUIRE_PAYMENT=1``) and optional ZK privacy tier are
+        attached via opaque proof strings that become HTTP headers:
+
+            payment_proof -> X-402-Payment
+                Supported formats (dispatched by prefix):
+                  - "base_usdc:0x<txhash>"   Base mainnet USDC transfer
+                  - "ecash:<proof>"          Fedimint ecash / LN preimage
+                  - "lightning:<bolt11>"     (reserved — server-gated)
+                  - "ccip:<txhash>"          (reserved — server-gated)
+
+            zk_proof -> X-402-ZK-Proof
+                Midnight selective-disclosure proof in the form
+                "<claim_type>:<proof_hash>:<circuit_id>". Adding this
+                tags the ledger entry ``privacy_tier: zk_attested``.
+
+        Paid jobs that omit ``payment_proof`` when the server enforces
+        payment will raise ``BlindOracleAPIError(402, ...)``.
+
+        See also: ``build_base_usdc_payment_header``,
+        ``build_zk_proof_header``.
+        """
         if proof_chain_hash == "auto":
             proof_chain_hash = hashlib.sha256(
                 f"{job_id}:{result_summary}:{time.time()}".encode()
             ).hexdigest()
 
-        return self._post(f"jobs/{job_id}/complete", {
-            "result_summary": result_summary,
-            "proof_chain_hash": proof_chain_hash,
-            "duration_secs": duration_secs,
-        })
+        extra_headers: Dict[str, str] = {}
+        if payment_proof:
+            extra_headers["X-402-Payment"] = payment_proof
+        if zk_proof:
+            extra_headers["X-402-ZK-Proof"] = zk_proof
+
+        return self._post(
+            f"jobs/{job_id}/complete",
+            {
+                "result_summary": result_summary,
+                "proof_chain_hash": proof_chain_hash,
+                "duration_secs": duration_secs,
+            },
+            extra_headers=extra_headers or None,
+        )
+
+    @staticmethod
+    def build_base_usdc_payment_header(tx_hash: str) -> str:
+        """Build an ``X-402-Payment`` value for a Base USDC transfer.
+
+        Pass the returned string as ``payment_proof`` to
+        :meth:`complete_job`. The server-side verifier resolves the tx on
+        Base mainnet, confirms the recipient is the configured treasury,
+        and checks amount within 1¢ of the agreed job price.
+        """
+        if not tx_hash.startswith("0x") or len(tx_hash) != 66:
+            raise ValueError(
+                f"tx_hash must be 0x-prefixed 32-byte hex, got: {tx_hash[:20]}..."
+            )
+        return f"base_usdc:{tx_hash}"
+
+    @staticmethod
+    def build_zk_proof_header(
+        claim_type: str, proof_hash: str, circuit_id: str
+    ) -> str:
+        """Build an ``X-402-ZK-Proof`` value for Midnight attestations.
+
+        Pass the returned string as ``zk_proof`` to :meth:`complete_job`.
+        The server re-runs the prover in ``local-prover`` mode to
+        re-verify the claim; on success the ledger entry is tagged
+        ``privacy_tier: zk_attested``.
+
+        Typical ``claim_type`` values: ``success_rate_gte``,
+        ``cost_lte``, ``latency_p95_lte``, ``compliance_pass``.
+        """
+        if not claim_type or ":" in claim_type:
+            raise ValueError(f"invalid claim_type: {claim_type!r}")
+        if not proof_hash or ":" in proof_hash:
+            raise ValueError(f"invalid proof_hash: {proof_hash!r}")
+        if not circuit_id:
+            raise ValueError("circuit_id required")
+        return f"{claim_type}:{proof_hash}:{circuit_id}"
 
     # -----------------------------------------------------------------------
     # Reputation
