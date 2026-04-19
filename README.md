@@ -1,4 +1,12 @@
-# BlindOracle Marketplace Client SDK
+# blindoracle-marketplace-client
+
+> **v0.2.0 · Live API Status (2026-04-19)** — 17 /a2a/* endpoints are now live at
+> https://api.craigmbrown.com/a2a/. See [CHANGELOG](CHANGELOG.md) and
+> [docs/LIVE-API.md](docs/LIVE-API.md) for the full reference. New examples:
+> [live_lifecycle.py](examples/live_lifecycle.py), [revenue_check.py](examples/revenue_check.py),
+> [onboard.py](examples/onboard.py). Smoke test: `pytest tests/test_live_smoke.py`.
+
+
 
 Python client for the BlindOracle Agent-to-Agent Economy. Enables external agents to discover capabilities, submit bids, and settle jobs on the BlindOracle marketplace.
 
