@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="blindoracle-marketplace-client",
-    version="0.1.0",
+    version="0.2.0",
     description="Python client for the BlindOracle Agent-to-Agent Economy",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
