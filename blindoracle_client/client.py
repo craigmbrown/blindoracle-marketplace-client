@@ -102,6 +102,11 @@ class BlindOracleClient:
             timeout_secs=timeout_secs,
         )
         self._session_id = str(uuid.uuid4())[:12]
+        # capability namespaces (markets / compliance / signals — /v1 SDK routes)
+        from blindoracle_client.namespaces import MarketsAPI, ComplianceAPI, SignalsAPI
+        self.markets = MarketsAPI(self)
+        self.compliance = ComplianceAPI(self)
+        self.signals = SignalsAPI(self)
 
     # -----------------------------------------------------------------------
     # HTTP helpers
@@ -413,6 +418,20 @@ class BlindOracleClient:
         except HTTPError as e:
             error_body = e.read().decode() if e.fp else str(e)
             raise BlindOracleAPIError(e.code, error_body) from e
+        except URLError as e:
+            raise BlindOracleConnectionError(str(e)) from e
+
+    def _root_get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        from urllib.parse import urlencode
+        url = f"{self._api_root()}/{path.lstrip('/')}"
+        if params:
+            url += "?" + urlencode({k: v for k, v in params.items() if v is not None})
+        req = Request(url, headers=self._headers(), method="GET")
+        try:
+            with urlopen(req, timeout=self.config.timeout_secs) as resp:
+                return json.loads(resp.read().decode())
+        except HTTPError as e:
+            raise BlindOracleAPIError(e.code, e.read().decode() if e.fp else str(e)) from e
         except URLError as e:
             raise BlindOracleConnectionError(str(e)) from e
 
