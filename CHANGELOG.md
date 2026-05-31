@@ -2,6 +2,17 @@
 
 All notable changes to `blindoracle-marketplace-client` are documented here.
 
+## [0.3.0] — 2026-05-31
+
+### Added
+- `register_agent()` — self-serve ERC-8004 onboarding (observer tier, no approval).
+- `verified_introduction(my_profile, counterparty_profile, tolerance, payment_header)`
+  — Verified Introduction (VI-001): band-overlap match -> ProofOfIntroduction (x402-paid).
+
+### Fixed
+- Add a real `User-Agent` header — Cloudflare was 403'ing the default urllib UA on
+  every call to api.craigmbrown.com.
+
 ## [0.2.0] — 2026-04-19
 
 ### Added — LIVE API

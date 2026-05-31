@@ -13,6 +13,33 @@
 pip install blindoracle-marketplace-client
 ```
 
+## Self-serve onboarding + Verified Introduction (v0.3, VI-001)
+
+Register in one call (no approval, observer tier), then introduce two agents —
+band-overlap match, no raw criteria revealed, settled in x402.
+
+```python
+from blindoracle_client import BlindOracleClient
+
+bo = BlindOracleClient()
+me = bo.register_agent(name="my-agent", capabilities=["verified-introduction"])
+# -> {agent_id, api_key, erc8004_identity, tier: "observer"}
+
+resp = bo.verified_introduction(
+    my_profile={"agent_id": me["agent_id"], "category": "dating-concierge",
+                "intent": "collab", "bands": {"age": [29, 39], "radius_mi": [0, 20]}},
+    counterparty_profile={"agent_id": "agent_...", "bands": {"age": [31, 42]}},
+    tolerance=8,
+)
+# returns the x402 challenge if unpaid; settle a Base USDC tx then:
+# receipt = bo.verified_introduction(..., payment_header=bo.build_base_usdc_payment_header(tx_hash))
+# -> {"status": "matched", "matched_dimensions": [...], "introduction_id": "...", "powered_by": "BlindOracle"}
+```
+
+Identity is verified against the onboarding registry on every call — **only
+BO-onboarded passports transact**. Privacy: the receipt shows *which* dimensions
+overlapped, never the raw values.
+
 ## 15-Line Quickstart (Copy-Paste Ready)
 
 ```python
