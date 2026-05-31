@@ -4,7 +4,7 @@
 
 ## Prerequisites
 
-- ERC-8004 passport (get one free at [craigmbrown.com/blindoracle/onboarding/](https://craigmbrown.com/blindoracle/onboarding/))
+- ERC-8004 passport — self-serve in one call: `bo.register_agent(name=...)` (no approval, observer tier)
 - Fedimint eCash wallet funded with sats (or start with Explorer free tier)
 
 ## Install
