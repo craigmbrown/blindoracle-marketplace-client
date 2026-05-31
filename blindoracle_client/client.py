@@ -111,6 +111,7 @@ class BlindOracleClient:
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "User-Agent": f"blindoracle-marketplace-client/{__import__('blindoracle_client').__version__}",
             "X-BlindOracle-Client": f"python-sdk/{__import__('blindoracle_client').__version__}",
             "X-Session-ID": self._session_id,
         }
@@ -389,6 +390,61 @@ class BlindOracleClient:
     def get_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get the agent reputation leaderboard."""
         return self._get(f"agents/leaderboard?limit={limit}").get("agents", [])
+
+    # -----------------------------------------------------------------------
+    # Self-serve onboarding + Verified Introduction (VI-001)
+    # -----------------------------------------------------------------------
+
+    def _api_root(self) -> str:
+        """API root (api_url without the trailing /a2a) for /v1/* endpoints."""
+        u = self.config.api_url.rstrip("/")
+        return u[:-4] if u.endswith("/a2a") else u
+
+    def _root_post(self, path: str, body: Dict[str, Any],
+                   extra_headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        url = f"{self._api_root()}/{path.lstrip('/')}"
+        headers = self._headers()
+        if extra_headers:
+            headers.update(extra_headers)
+        req = Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
+        try:
+            with urlopen(req, timeout=self.config.timeout_secs) as resp:
+                return json.loads(resp.read().decode())
+        except HTTPError as e:
+            error_body = e.read().decode() if e.fp else str(e)
+            raise BlindOracleAPIError(e.code, error_body) from e
+        except URLError as e:
+            raise BlindOracleConnectionError(str(e)) from e
+
+    def register_agent(self, name: str, capabilities: Optional[List[str]] = None,
+                       evm_address: str = "", nostr_pubkey: str = "") -> Dict[str, Any]:
+        """Self-serve onboarding: mint an ERC-8004 passport + API key (observer tier).
+        No approval required. Returns {agent_id, api_key, erc8004_identity, ...}."""
+        return self._root_post("v1/agents/register", {
+            "name": name, "capabilities": capabilities or [],
+            "evm_address": evm_address, "nostr_pubkey": nostr_pubkey,
+        })
+
+    def verified_introduction(self, my_profile: Dict[str, Any],
+                              counterparty_profile: Dict[str, Any],
+                              tolerance: int = 0,
+                              payment_header: Optional[str] = None) -> Dict[str, Any]:
+        """Verified Introduction (VI-001): band-overlap match between two BO-registered
+        agents (no raw criteria revealed) -> ProofOfIntroduction. x402-paid ($0.25).
+
+        my_profile / counterparty_profile: {"agent_id", "category", "intent",
+            "bands": {dim: [min, max]}}. Without payment_header, returns the x402
+            challenge (HTTP 402); pass build_base_usdc_payment_header(tx_hash) to settle.
+        """
+        for p, lbl in ((my_profile, "my_profile"), (counterparty_profile, "counterparty_profile")):
+            if not isinstance(p, dict) or not p.get("agent_id") or not p.get("bands"):
+                raise ValueError(f"{lbl} needs 'agent_id' (your BO passport) and 'bands'")
+        task = json.dumps({"buyer_profile": my_profile,
+                           "counterparty_profile": counterparty_profile,
+                           "tolerance": int(tolerance)})
+        hdr = {"X-402-Payment": payment_header} if payment_header else None
+        return self._root_post("v1/services/social.verified_introduction",
+                               {"task": task}, extra_headers=hdr)
 
     # -----------------------------------------------------------------------
     # Webhooks

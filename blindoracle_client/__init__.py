@@ -2,7 +2,7 @@
 
 from blindoracle_client.client import BlindOracleClient
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = ["BlindOracleClient"]
 
 # Framework integrations (imported lazily to avoid hard deps)
