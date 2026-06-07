@@ -1,5 +1,15 @@
 # blindoracle-marketplace-client
 
+> # ⚠️ DEPRECATED — use [`blindoracle-sdk`](https://github.com/craigmbrown/blindoracle-sdk)
+> This package (the older v0.2.0 a2a-endpoints client) is **no longer maintained**.
+> The canonical Python SDK is **`blindoracle-sdk`** — `pip install blindoracle-sdk`
+> (verifiable agent trust, prediction markets, audit attestation, Verified Introductions).
+> Migrate: replace `pip install blindoracle-marketplace-client` → `pip install blindoracle-sdk`
+> and `from blindoracle_client ...` → `from blindoracle_sdk ...` (APIs differ — see SDK README).
+
+---
+
+
 > **v0.2.0 · Live API Status (2026-04-19)** — 17 /a2a/* endpoints are now live at
 > https://api.craigmbrown.com/a2a/. See [CHANGELOG](CHANGELOG.md) and
 > [docs/LIVE-API.md](docs/LIVE-API.md) for the full reference. New examples:

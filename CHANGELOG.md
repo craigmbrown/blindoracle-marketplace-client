@@ -2,6 +2,9 @@
 
 All notable changes to `blindoracle-marketplace-client` are documented here.
 
+## [DEPRECATED] 2026-06-07
+- This package is deprecated. Use **`blindoracle-sdk`** (`pip install blindoracle-sdk`, https://github.com/craigmbrown/blindoracle-sdk). No further releases planned.
+
 ## [0.3.0] — 2026-05-31
 
 ### Added
